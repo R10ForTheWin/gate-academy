@@ -1,4 +1,4 @@
-const CACHE = 'gate-academy-v13';
+const CACHE = 'gate-academy-v14';
 const PRECACHE = ['./', './index.html', './content.js', './app.js', './manifest.json', './professor-oreo.png', './logo.png', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './oreo-dance.mp4', './oreo-puddle.mp4', './oreo-greenscreen.mp4'];
 
 self.addEventListener('install', e => {
