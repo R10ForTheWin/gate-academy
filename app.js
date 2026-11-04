@@ -153,10 +153,10 @@
     screen.innerHTML = `
       <div class="topline">
         <span class="tl-title">Oreo’s GATE Academy</span>
-        <button class="chip ${n ? 'hot' : ''}" data-streak title="Your streak">🔥 ${n}</button>
-        <button class="chip" data-countdown title="Days until test day">📅 ${days > 0 ? days : '🎉'}</button>
-        <span class="chip" title="Fish treats">🐟 ${S.fish}</span>
+        <button class="chip ${n ? 'hot' : ''}" data-streak>🔥 ${n ? `${n}-day streak` : 'Start a streak!'}</button>
+        <span class="chip">🐟 ${S.fish} fish</span>
       </div>
+      <button class="countdown-bar" data-countdown>${countdownLine(days)}</button>
       <div class="goal-mini"><span>Today’s goal</span><div class="goalbar"><i style="width:${Math.min(100, done / S.goal * 100)}%"></i></div><b>${Math.min(done, S.goal)}/${S.goal}</b></div>
       ${say(msg)}
       <button class="continue" ${allDone ? 'data-review' : `data-node="${cur.id}"`}>
@@ -180,6 +180,14 @@
       <div class="home-links"><button class="link" data-tests>📝 Practice tests</button><button class="link" data-tips>💡 Test tips</button><button class="link" data-settings>⚙️ Settings</button></div>
       <p class="fine">Original practice puzzles written for Rose by Professor Oreo. Not affiliated with Pearson or the official OLSAT.</p>`;
     window.scrollTo(0, 0);
+  }
+  function countdownLine(d) {
+    if (d < 0) return '<span class="cd-num">🏁</span><span class="cd-txt"><b>Test day is done!</b><small>So proud of you, Rose.</small></span>';
+    if (d === 0) return '<span class="cd-num">🎉</span><span class="cd-txt"><b>Today is GATE test day!</b><small>2:45 PM · You’ve got this!</small></span>';
+    if (d === 1) return '<span class="cd-num">1</span><span class="cd-txt"><b>Your GATE test is TOMORROW!</b><small>Get a good night’s sleep 😴</small></span>';
+    const weeks = Math.floor(d / 7);
+    const sub = d <= 14 ? `Only ${d} days left — keep practicing!` : `That’s about ${weeks} weeks · Wednesday, March 3`;
+    return `<span class="cd-num">${d}</span><span class="cd-txt"><b>days until your GATE test</b><small>${sub}</small></span>`;
   }
   function streakInfo() { modal(streakCard(), [['OK', 'green', null]]); }
   function countdownInfo() {
