@@ -100,93 +100,146 @@
     else { big = '🏁'; lbl = 'Test day is done — so proud of you!'; }
     return `<div class="card countdown">
       <div class="big">${big}</div><div class="lbl">${lbl}</div>
-      <div class="sub">OLSAT · Wed, March 3, 2027 · 2:45 PM<br>Multipurpose Room</div>
-      ${d > 13 ? `<div><span class="weeks">${Math.floor(d / 7)} weeks · ${d * S.goal} questions at your daily goal</span></div>` : ''}
+      <div class="sub">Wed, March 3 · 2:45 PM</div>
     </div>`;
   }
-  function tile(t) {
-    const T = TYPES[t], m = mastery(t);
-    return `<button class="tile" data-lesson="${t}" style="--c:${CAT[T.cat].color}"><div class="ic">${T.icon}</div><div><div class="nm">${esc(T.name)}</div><div class="lv">${level(t)}${m !== null ? ` · ${Math.round(m * 100)}%` : ''}</div><div class="bar"><i style="width:${m === null ? 0 : Math.round(m * 100)}%"></i></div></div></button>`;
+  // ───────── THE PATH: Oreo leads, one step at a time ─────────
+  const UNITS = [
+    { id: 'verbal', name: 'Word Power', icon: '📖', steps: ['antonym', 'completion', 'arrange'] },
+    { id: 'figural', name: 'Picture Puzzles', icon: '🔷', steps: ['figSeries', 'figAnalogy', 'figClass', 'matrix'] },
+    { id: 'quant', name: 'Number Sense', icon: '🔢', steps: ['numSeries', 'numInfer', 'numMatrix'] },
+    { id: 'reason', name: 'Word Logic', icon: '🧩', steps: ['analogy', 'classify', 'logical', 'logic', 'order', 'letters', 'arith'] },
+  ];
+  const NODES = [];
+  UNITS.forEach(u => {
+    u.steps.forEach(t => NODES.push({ id: 'lesson:' + t, unit: u.id, kind: 'lesson', type: t, name: TYPES[t].name, icon: TYPES[t].icon }));
+    NODES.push({ id: 'cp:' + u.id, unit: u.id, kind: 'cp', cat: u.id, name: `${u.name} Checkpoint`, icon: '🏁' });
+  });
+  UNITS.push({ id: 'ready', name: 'Test Ready', icon: '🎓' });
+  NODES.push({ id: 'test:mini', unit: 'ready', kind: 'test', test: 'mini', name: 'Mini Practice Test', icon: '⏱️' });
+  NODES.push({ id: 'test:full', unit: 'ready', kind: 'test', test: 'full', name: 'Full Practice Test', icon: '📝' });
+  const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
+  const isDone = id => !!(S.done && S.done[id]);
+  function markDone(id, score) { S.done = S.done || {}; S.done[id] = { at: Date.now(), score }; save(); }
+  const currentIndex = () => { const i = NODES.findIndex(n => !isDone(n.id)); return i < 0 ? NODES.length : i; };
+  const openUnits = new Set();
+
+  function startNode(id) {
+    const n = NODE[id];
+    if (!n) return home();
+    if (n.kind === 'lesson') return guided(n.type, 0, id);
+    if (n.kind === 'cp') return startPractice(CAT[n.cat].types, `🏁 ${CAT[n.cat].name} Checkpoint`, 8, null, id);
+    return testIntro(n.test);
   }
-  function suggestion() {
-    const order = CATS.flatMap(c => c.types);
-    const fresh = order.find(t => !S.stats[t]);
-    if (fresh) return fresh;
-    return order.slice().sort((a, b) => mastery(a) - mastery(b))[0];
+  function reviewSeq() { // weakest skills get extra attention
+    const all = Object.keys(TYPES).sort((a, b) => (mastery(a) ?? 0) - (mastery(b) ?? 0));
+    return shuffle([...all.slice(0, 5), ...shuffle(all.slice(5)).slice(0, 5)]);
   }
 
-  // ───────── HOME ─────────
+  // ───────── HOME: where am I, and what's next ─────────
   function home() {
     stopTimer();
-    const sug = suggestion(), T = TYPES[sug];
-    const n = streakNow(), doneToday = met(todayKey());
-    const greet = doneToday ? `Daily goal done — your streak is safe! 🔥 Want to keep going? Try another mission, or learn <b>${esc(T.name)}</b>.`
-      : n > 0 ? `You’re on a <b>${n}-day streak</b>! Today’s mission mixes word, picture and number puzzles. Or learn something new: <b>${esc(T.name)}</b>.`
-      : `Welcome to my academy, Rose! I’ll teach you every kind of puzzle on the OLSAT. Start with today’s mission, or with my lesson on <b>${esc(T.name)}</b>.`;
-    const tests = S.tests.slice(-5).reverse();
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    const ci = currentIndex(), cur = NODES[ci], allDone = !cur;
+    const done = S.days[todayKey()] || 0, doneToday = done >= S.goal, n = streakNow(), days = daysToTest();
+    const first = !Object.keys(S.done || {}).length && !Object.keys(S.stats).length;
+    let msg;
+    if (first) msg = 'Hi Rose! I’m <b>Professor Oreo</b>. I’ll walk you through every kind of puzzle on the GATE test — one small step at a time. Ready for your first lesson?';
+    else if (allDone) msg = 'You finished the whole path! 🎓 Now we keep your skills sharp: each <b>Daily Review</b> mixes puzzles, with extra practice on your trickiest ones.';
+    else if (cur.kind === 'cp') msg = `You finished every <b>${CAT[cur.cat].name}</b> lesson! Let’s do a quick checkpoint to lock it in.`;
+    else if (cur.kind === 'test') msg = `You’ve learned every kind of puzzle! Time to try a <b>${cur.name}</b> — just like the real thing.`;
+    else msg = `${doneToday ? 'You already hit today’s goal — this one is a bonus round! ' : ''}Next up: <b>${esc(cur.name)}</b>. It takes about 5 minutes.`;
+    const curUnit = cur ? cur.unit : null;
     screen.innerHTML = `
-      <div class="hero">
-        <img src="oreo-face.png" alt="Professor Oreo">
-        <div><h1>Oreo’s GATE Academy</h1><p>Thinking-skills training for the OLSAT</p></div>
-        <div class="fish" title="Fish treats earned (1 per correct answer)">🐟 ${S.fish}</div>
+      <div class="topline">
+        <span class="tl-title">Oreo’s GATE Academy</span>
+        <button class="chip ${n ? 'hot' : ''}" data-streak title="Your streak">🔥 ${n}</button>
+        <button class="chip" data-countdown title="Days until test day">📅 ${days > 0 ? days : '🎉'}</button>
+        <span class="chip" title="Fish treats">🐟 ${S.fish}</span>
       </div>
-      <div class="dash">${streakCard()}${countdownCard()}</div>
-      ${say(greet, `<div class="say-actions"><button class="btn flame" data-mission>🎯 Daily Mission · 10 questions</button><button class="btn ghost" data-lesson="${sug}">${T.icon} ${esc(T.name)} lesson</button></div>`)}
-      <div class="tests">
-        <button class="testbtn" data-test="mini"><span class="ic">⏱️</span><div class="t">Mini Test</div><div class="d">24 mixed questions · 14 minutes</div></button>
-        <button class="testbtn" data-test="full"><span class="ic">📝</span><div class="t">Full Practice Test</div><div class="d">72 questions · 40 minutes · full length</div></button>
-        <button class="testbtn" data-tips><span class="ic">💡</span><div class="t">Oreo’s Test Tips</div><div class="d">How the OLSAT works & how to beat it</div></button>
+      <div class="goal-mini"><span>Today’s goal</span><div class="goalbar"><i style="width:${Math.min(100, done / S.goal * 100)}%"></i></div><b>${Math.min(done, S.goal)}/${S.goal}</b></div>
+      ${say(msg)}
+      <button class="continue" ${allDone ? 'data-review' : `data-node="${cur.id}"`}>
+        <span class="ci">${allDone ? '🎯' : cur.icon}</span>
+        <span class="cl"><small>${allDone ? 'Keep sharp' : first ? 'Start here' : 'Continue'}</small>${allDone ? 'Daily Review' : esc(cur.name)}</span>
+        <span class="cg">›</span>
+      </button>
+      <div class="path">
+        ${UNITS.map(u => {
+          const ns = NODES.filter(x => x.unit === u.id), d = ns.filter(x => isDone(x.id)).length;
+          const locked = ns.every(x => NODES.indexOf(x) > ci), open = u.id === curUnit || openUnits.has(u.id);
+          return `<div class="unit ${open ? 'open' : ''} ${locked ? 'locked' : ''}">
+            <button class="unit-h" data-unit="${u.id}"><span>${u.icon}</span><b>${u.name}</b><small>${locked ? '🔒' : d === ns.length ? '✓ Done' : `${d} of ${ns.length}`}</small></button>
+            ${open ? `<div class="nodes">${ns.map(x => {
+              const idx = NODES.indexOf(x), st = isDone(x.id) ? 'done' : idx === ci ? 'cur' : 'lock';
+              return `<button class="node ${st}" data-node="${x.id}"><span class="dot">${st === 'done' ? '✓' : st === 'lock' ? '🔒' : x.icon}</span><span>${esc(x.name)}</span></button>`;
+            }).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
       </div>
-      ${CATS.map(c => `
-        <section class="cat" style="--c:${c.color}">
-          <div class="cat-h"><h2>${c.name}</h2><span>${c.sub}</span><button class="mix" data-mix="${c.id}">Mixed practice ›</button></div>
-          <div class="tiles">${c.types.map(tile).join('')}</div>
-        </section>`).join('')}
-      ${tests.length ? `<div class="card history"><h3>Recent tests</h3>${tests.map(t => `<div class="hrow"><span>${esc(t.label)} · ${new Date(t.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span><span>${t.score}/${t.n} (${Math.round(t.score / t.n * 100)}%)</span></div>`).join('')}</div>` : ''}
-      <div class="settings">
-        <div><b>Daily goal:</b> <span class="seg">${[5, 10, 20, 30].map(g => `<button data-goal="${g}" class="${S.goal === g ? 'on' : ''}">${g}</button>`).join('')}</span> <span style="color:var(--muted);font-weight:700">questions</span></div>
-        <button class="link" data-reset>Reset progress</button>
-      </div>
-      <p class="fine">Original practice puzzles written for Rose by Professor Oreo. Not affiliated with Pearson or the official OLSAT — scores here are for practice and don’t predict official results.</p>`;
+      <div class="home-links"><button class="link" data-tests>📝 Practice tests</button><button class="link" data-tips>💡 Test tips</button><button class="link" data-settings>⚙️ Settings</button></div>
+      <p class="fine">Original practice puzzles written for Rose by Professor Oreo. Not affiliated with Pearson or the official OLSAT.</p>`;
     window.scrollTo(0, 0);
+  }
+  function streakInfo() { modal(streakCard(), [['OK', 'green', null]]); }
+  function countdownInfo() {
+    modal(`${countdownCard()}<p style="margin-top:12px">The test is <b>after school in the Multipurpose Room</b>. A little practice every day beats a lot at once!</p>`, [['OK', 'green', null]]);
   }
 
-  // ───────── LESSON ─────────
-  let lessonQ = null;
-  function lesson(t) {
+  // ───────── GUIDED LESSON: Meet it → Watch Oreo → Your turn → Practice ─────────
+  let G = null;
+  const STAGES = ['Meet it', 'Watch Oreo', 'Your turn', 'Practice'];
+  function stepper(stage) {
+    return `<div class="stepper">${STAGES.map((l, i) => `<span class="${i < stage ? 'past' : i === stage ? 'now' : ''}"><i>${i < stage ? '✓' : i + 1}</i><em>${l}</em></span>`).join('')}</div>`;
+  }
+  function guided(type, stage, nodeId = 'lesson:' + type) {
     stopTimer();
-    const T = TYPES[t], c = CAT[T.cat];
-    lessonQ = generate(t);
+    P = null;
+    const T = TYPES[type], c = CAT[T.cat];
+    if (stage === 0 || !G || G.type !== type) G = { type, nodeId, q: generate(type), q2: null };
+    G.stage = stage;
+    let body = '', btn = '';
+    if (stage === 0) {
+      body = `${say(T.intro)}<div class="section-lbl">Here’s what one looks like</div>${qHTML(G.q).replace('class="opts ', 'class="opts locked preview ')}`;
+      btn = '<button class="btn wide big" data-g="1">Show me how ›</button>';
+    } else if (stage === 1) {
+      const card = qHTML(G.q).replace('class="opts ', 'class="opts locked ').replace(`data-opt="${G.q.answer}"`, `data-opt="${G.q.answer}" data-right`);
+      body = `${say(`Watch me solve it. 🐾 ${T.trick}`)}${card}<div class="feedback ok"><div class="head">${face()}Here’s how I got it:</div><div class="why">${G.q.explain}</div></div>`;
+      btn = '<button class="btn wide big green" data-g="2">My turn ›</button>';
+    } else {
+      G.q2 = generate(type);
+      body = `${say('Your turn! Take your time. If you get stuck, tap the hint — that’s what it’s for.')}${qHTML(G.q2)}<div id="hintbox">${hintBtn()}</div><div id="lesson-fb"></div>`;
+    }
     screen.innerHTML = `
-      <div class="lesson" style="--c:${c.color}">
-        <div class="bar-top"><button class="btn ghost" data-home style="padding:8px 14px">‹ Academy</button><span class="tbadge">${c.name} · ${c.sub}</span></div>
-        <h1>${T.icon} ${esc(T.name)}</h1>
-        ${say(T.intro)}
-        <div class="trick"><div class="h">🐾 Oreo’s Trick</div>${T.trick}</div>
-        <div class="section-lbl">Try an example</div>
-        <div id="lesson-q">${qHTML(lessonQ)}</div>
-        <div id="hintbox">${hintBtn()}</div>
-        <div id="lesson-fb"></div>
-        <div class="lesson-actions">
-          <button class="btn green" data-practice="${t}">Practice 10 questions ›</button>
-          <button class="btn ghost" data-newex="${t}">New example</button>
-        </div>
+      <div class="guide" style="--c:${c.color}">
+        <div class="bar-top"><button class="xbtn" data-home aria-label="Back to path">✕</button>${stepper(stage)}</div>
+        <h1 class="g-title">${T.icon} ${esc(T.name)}</h1>
+        ${body}
+        ${btn ? `<div class="g-next">${btn}</div>` : ''}
       </div>`;
+    screen.querySelectorAll('[data-right]').forEach(b => b.classList.add('right'));
     window.scrollTo(0, 0);
   }
-  function lessonAnswer(i) {
-    const q = lessonQ, box = screen.querySelector('#lesson-q .opts');
+  function guidedAnswer(i) {
+    const q = G.q2, box = screen.querySelector('.qcard .opts');
     if (!box || box.classList.contains('locked')) return;
     markOpts(box, q, i);
+    const hinted = !!screen.querySelector('#hintbox .oreo-say');
     clearHintBtn();
     const ok = i === q.answer;
-    screen.querySelector('#lesson-fb').innerHTML = feedbackHTML(ok, q.explain, '');
+    record(q.type, ok, hinted);
+    const hit = countToday();
+    screen.querySelector('#lesson-fb').innerHTML = feedbackHTML(ok, q.explain + (ok ? '' : '<div class="why"><b>That’s okay — practice is where it clicks.</b></div>'),
+      '<button class="btn wide big green" data-g="3">Start practice · 5 questions ›</button>');
+    screen.querySelector('#lesson-fb').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (hit) setTimeout(celebrate, 600);
   }
+  function lesson(t) { guided(t, 0); }
 
   // ───────── hints ─────────
   const hintBtn = () => '<button class="btn ghost hintbtn" data-hint>💡 Need a hint?</button>';
   function showHint() {
-    const q = P && P.q && !P.answered && screen.querySelector('.bar-top [data-quit]') ? P.q : lessonQ;
+    const q = P && P.q && !P.answered && screen.querySelector('.bar-top [data-quit]') ? P.q : G && G.q2;
     if (!q) return;
     if (P && q === P.q) { P.qHinted = true; P.hints++; }
     screen.querySelector('#hintbox').innerHTML = say(`💡 ${q.hint}`);
@@ -221,15 +274,11 @@
 
   // ───────── PRACTICE ─────────
   let P = null;
-  function missionSeq() {
-    const verbal = shuffle([...CAT.verbal.types, ...CAT.reason.types]).slice(0, 5);
-    return shuffle([...verbal, ...shuffle(CAT.figural.types).slice(0, 3), ...shuffle(CAT.quant.types).slice(0, 2)]);
-  }
-  function startPractice(types, label, total = 10, seq = null) {
-    P = { types, label, total, seq, i: 0, score: 0, run: 0, hints: 0, q: null, answered: false, missed: [], fish0: S.fish, lastType: null, seen: new Set() };
+  function startPractice(types, label, total = 10, seq = null, step = null) {
+    P = { types, label, total, seq, step, i: 0, score: 0, run: 0, hints: 0, q: null, answered: false, missed: [], fish0: S.fish, lastType: null, seen: new Set() };
     nextPractice();
   }
-  function startMission() { startPractice(Object.keys(TYPES), '🎯 Daily Mission', 10, missionSeq()); }
+  function startMission() { startPractice(Object.keys(TYPES), '🎯 Daily Review', 10, reviewSeq()); }
   function nextPractice() {
     if (P.i >= P.total) return practiceEnd();
     let t = P.seq ? P.seq[P.i] : pick(P.types);
@@ -272,6 +321,7 @@
   }
   function practiceEnd() {
     const pct = P.score / P.total, fish = S.fish - P.fish0;
+    if (P.step) return stepEnd(pct, fish);
     const msg = pct === 1 ? 'A perfect score! Oreo is doing backflips! 🐱' : pct >= 0.8 ? 'Excellent work — you’re thinking like a GATE student!' : pct >= 0.6 ? 'Nice job! Look over the misses below — that’s where the learning happens.' : 'These are tough! Read Oreo’s explanations below, then try another round.';
     screen.innerHTML = `
       <div class="results">
@@ -283,10 +333,40 @@
           <div class="stat-row"><span class="pill">🐟 +${fish} fish</span><span class="pill flame">🔥 ${streakNow()} day streak</span><span class="pill">Today: ${S.days[todayKey()] || 0} questions</span>${P.hints ? `<span class="pill">💡 ${P.hints} hint${P.hints > 1 ? 's' : ''} used</span>` : ''}</div>
         </div>
         <div class="lesson-actions" style="justify-content:center">
-          <button class="btn green" data-again>Practice again</button>
-          <button class="btn ghost" data-home>Back to Academy</button>
+          <button class="btn green" data-again>Another review</button>
+          <button class="btn ghost" data-home>Back to my path</button>
         </div>
         ${P.missed.length ? `<div class="section-lbl">Review your misses</div><div class="review">${P.missed.map(reviewHTML).join('')}</div>` : ''}
+      </div>`;
+    window.scrollTo(0, 0);
+    const k = screen.querySelector('.keyed'); if (k) startKeyed(k);
+  }
+  function stepEnd(pct, fish) {
+    const node = NODE[P.step], isCp = node.kind === 'cp';
+    const passed = isCp || P.score >= Math.ceil(P.total * 0.6);
+    const wasDone = isDone(node.id);
+    if (passed) markDone(node.id, pct);
+    const next = passed ? (NODES.find(n => !isDone(n.id)) || null) : null;
+    let msg;
+    if (!passed) msg = `${P.score} out of ${P.total} — this one is tricky! Read my explanations below, then let’s practice it once more.`;
+    else if (isCp) msg = pct >= 0.75 ? `Checkpoint cleared! You really know your ${esc(CAT[node.cat].name)}. 🎉` : 'Checkpoint done! A few of these are still tricky — I’ll mix them into your Daily Reviews.';
+    else msg = pct === 1 ? `Perfect! You’ve got <b>${esc(node.name)}</b> down. 🐾` : `Nice work — <b>${esc(node.name)}</b> ${wasDone ? 'practiced again' : 'complete'}! ✓`;
+    screen.innerHTML = `
+      <div class="results">
+        ${pct >= 0.8 ? keyedHTML('oreo-greenscreen.mp4', 'results') : ''}
+        ${say(msg)}
+        <div class="card">
+          <div class="of">${esc(P.label)}</div>
+          <div class="score">${P.score}/${P.total}</div>
+          <div class="stat-row"><span class="pill">🐟 +${fish} fish</span><span class="pill">Today: ${Math.min(S.days[todayKey()] || 0, S.goal)}/${S.goal}</span></div>
+        </div>
+        <div class="g-next">
+          ${passed
+            ? (next ? `<button class="btn wide big green" data-node="${next.id}">Next: ${next.icon} ${esc(next.name)} ›</button>` : '<button class="btn wide big green" data-home>See your path 🎓</button>')
+            : '<button class="btn wide big" data-again>Practice once more ›</button>'}
+          <button class="btn ghost wide" data-home style="margin-top:10px">Back to my path</button>
+        </div>
+        ${P.missed.length ? `<div class="section-lbl">Let’s look at the ones you missed</div><div class="review">${P.missed.map(reviewHTML).join('')}</div>` : ''}
       </div>`;
     window.scrollTo(0, 0);
     const k = screen.querySelector('.keyed'); if (k) startKeyed(k);
@@ -297,7 +377,7 @@
     div.innerHTML = html;
     div.querySelectorAll('.opt').forEach((b, i) => { if (i === q.answer) b.classList.add('right'); else if (i === p) b.classList.add('wrong'); });
     const card = div.querySelector('.qcard');
-    card.insertAdjacentHTML('beforeend', `${p === null ? '<div class="yours">You left this one blank — on test day, always guess!</div>' : ''}<div class="why">🐾 ${q.explain}</div><div style="margin-top:10px"><button class="link" data-lesson="${q.type}">Practice ${esc(TYPES[q.type].name)} ›</button></div>`);
+    card.insertAdjacentHTML('beforeend', `${p === null ? '<div class="yours">You left this one blank — on test day, always guess!</div>' : ''}<div class="why">🐾 ${q.explain}</div>`);
     return div.innerHTML;
   }
 
@@ -378,6 +458,7 @@
       if (!ok) missed.push({ q, pick: p });
     });
     S.tests.push({ at: Date.now(), label: X.label, score, n: X.n, secs });
+    markDone('test:' + X.kind, X.n ? score / X.n : 0);
     const hit = answered ? countToday(answered) : (save(), false);
     const pct = score / X.n;
     const msg = (timeUp ? '⏰ Time’s up! ' : '') + (pct >= 0.85 ? 'Outstanding! That’s GATE-level thinking!' : pct >= 0.7 ? 'Great job! A few more practice rounds on your weakest section and you’ll be unstoppable.' : pct >= 0.5 ? 'Good effort! Check which section scored lowest and visit those lessons.' : 'This was a tough one. Practicing each lesson will make the next test feel much easier!');
@@ -394,7 +475,7 @@
           <div class="rcats">${CATS.filter(c => byCat[c.id]).map(c => `<div class="rcat" style="--c:${c.color}"><div class="top"><span>${c.name} <span style="color:var(--muted);font-weight:700">· ${c.sub}</span></span><span>${byCat[c.id].c}/${byCat[c.id].n}</span></div><div class="bar"><i style="width:${byCat[c.id].c / byCat[c.id].n * 100}%"></i></div></div>`).join('')}</div>
           <div class="stat-row"><span class="pill">🐟 +${score} fish</span><span class="pill flame">🔥 ${streakNow()} day streak</span></div>
         </div>
-        <div class="lesson-actions" style="justify-content:center"><button class="btn" data-home>Back to Academy</button></div>
+        <div class="g-next"><button class="btn wide big" data-home>Back to my path</button></div>
         ${missed.length ? `<div class="section-lbl">Review (${missed.length} to learn from)</div><div class="review">${missed.map(reviewHTML).join('')}</div>` : ''}
       </div>`;
     window.scrollTo(0, 0);
@@ -492,27 +573,36 @@
     const el = e.target.closest('button');
     if (!el || el.closest('.overlay')) return;
     const d = el.dataset;
-    if (d.lesson) return lesson(d.lesson);
+    if (d.node) {
+      const idx = NODES.findIndex(n => n.id === d.node);
+      if (idx > currentIndex()) return modal(`<div class="oreo-say" style="margin:0">${face()}<div class="bubble"><span class="name">Professor Oreo</span>Not yet! Finish <b>${esc(NODES[currentIndex()].name)}</b> first — each step gets you ready for the next one. 🐾</div></div>`, [['OK', 'green', null]]);
+      return startNode(d.node);
+    }
+    if (d.unit) { if (openUnits.has(d.unit)) openUnits.delete(d.unit); else openUnits.add(d.unit); return home(); }
+    if (d.g) {
+      const st = +d.g;
+      if (st < 3) return guided(G.type, st, G.nodeId);
+      return startPractice([G.type], TYPES[G.type].name, 5, null, G.nodeId);
+    }
     if ('home' in d) return home();
-    if (d.practice) return startPractice([d.practice], TYPES[d.practice].name);
-    if (d.newex) return lesson(d.newex);
-    if (d.mix) return startPractice(CAT[d.mix].types, `${CAT[d.mix].name} mix`);
-    if (d.test) return modal(`<h2>${d.test === 'full' ? '📝 Full Practice Test' : '⏱️ Mini Test'}</h2><p>${d.test === 'full' ? '72 mixed questions. Timed mode gives you 40 minutes — about 33 seconds a question.' : '24 mixed questions. Timed mode gives you 14 minutes — about 35 seconds a question.'} You won’t see answers or hints until the end. Skip with <b>Next</b> and jump back with the number buttons.</p><p style="margin-top:8px">Choose <b>Untimed</b> to practice without the clock.</p>`, [['Untimed', 'ghost', () => startTest(d.test, false)], ['⏱ Timed', 'green', () => startTest(d.test, true)]]);
-    if ('mission' in d) return startMission();
+    if ('review' in d) return startMission();
+    if ('streak' in d) return streakInfo();
+    if ('countdown' in d) return countdownInfo();
+    if ('tests' in d) return testsMenu();
+    if ('settings' in d) return settings();
+    if (d.test) return testIntro(d.test);
     if ('hint' in d) return showHint();
     if ('tips' in d) return tips();
-    if (d.goal) { S.goal = +d.goal; save(); return home(); }
-    if ('reset' in d) return modal('<h2>Reset all progress?</h2><p>This erases streaks, fish, scores, and test history on this device. It can’t be undone.</p>', [['Cancel', 'ghost', null], ['Reset', 'red', () => { S = { ...DEFAULTS, stats: {}, days: {}, tests: [] }; save(); home(); }]]);
     if (d.opt !== undefined) {
       const i = +d.opt;
-      if (el.closest('#lesson-q')) return lessonAnswer(i);
-      if (el.closest('.review')) return;
+      if (el.closest('.review') || el.closest('.preview')) return;
       if (X) return testPick(i);
+      if (!P && G && G.stage === 2 && screen.querySelector('.guide')) return guidedAnswer(i);
       if (P) return practiceAnswer(i);
     }
     if ('next' in d) return nextPractice();
-    if ('again' in d) return P.seq ? startMission() : startPractice(P.types, P.label, P.total);
-    if ('quit' in d) return P.i > 0 ? modal('<h2>Leave practice?</h2><p>Your answers so far still count toward your streak.</p>', [['Stay', 'green', null], ['Leave', 'ghost', home]]) : home();
+    if ('again' in d) return P.step ? startPractice(P.types, P.label, P.total, null, P.step) : startMission();
+    if ('quit' in d) return P.i > 0 ? modal('<h2>Leave for now?</h2><p>Your answers so far still count toward today’s goal. You can pick this step up again from your path.</p>', [['Stay', 'green', null], ['Leave', 'ghost', home]]) : home();
     if ('quittest' in d) return modal('<h2>Quit the test?</h2><p>This test won’t be scored.</p>', [['Keep going', 'green', null], ['Quit', 'red', () => { X = null; clearTest(); home(); }]]);
     if ('prev' in d) { X.i--; return renderTest(); }
     if ('tnext' in d) { X.i++; return renderTest(); }
@@ -528,7 +618,7 @@
       const btn = screen.querySelector(`.opts:not(.locked) [data-opt="${idx}"]`);
       if (btn) btn.click();
     } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
-      const b = screen.querySelector('[data-next], [data-tnext]');
+      const b = screen.querySelector('[data-next], [data-tnext], .g-next [data-g], #lesson-fb [data-g]');
       if (b) { e.preventDefault(); b.click(); }
     } else if (e.key === 'ArrowLeft') {
       const b = screen.querySelector('[data-prev]:not([disabled])');
