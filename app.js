@@ -65,7 +65,7 @@
   // ───────── Oreo voice ─────────
   const YAY = ['Purr-fect!', 'Paw-some!', 'Meow-velous!', 'Claw-some!', 'Fur-midable!', 'You’re the cat’s whiskers!', 'Whisker-sharp thinking!', 'Hiss-torically good!', 'Feline fine!'];
   const OOPS = ['Not quite — here’s the trick:', 'Close! Let’s look at why:', 'Tricky one! Here’s how Oreo thinks about it:', 'Good try — every miss is a lesson:'];
-  const face = (cls = '') => `<img src="oreo-face.png" alt="Oreo" class="${cls}">`;
+  const face = (cls = '') => `<img src="professor-oreo.png" alt="Oreo" class="${cls}">`;
   const say = (html, extra = '') => `<div class="oreo-say">${face()}<div class="bubble"><span class="name">Professor Oreo</span>${html}${extra}</div></div>`;
 
   // ───────── components ─────────
@@ -519,7 +519,7 @@
     setTimeout(() => c.remove(), 5500);
   }
   // ───────── green-screen Oreo: keyed live onto a canvas (works in Chrome and iPad Safari from one MP4) ─────────
-  const keyedHTML = (src, cls = '') => `<div class="keyed ${cls}"><img src="oreo-face.png" alt="Oreo dancing" class="kfallback"><canvas width="360" height="640" aria-hidden="true"></canvas><video src="${src}" muted ${cls === 'home' ? '' : 'loop autoplay'} playsinline preload="auto"></video></div>`;
+  const keyedHTML = (src, cls = '') => `<div class="keyed ${cls}"><img src="professor-oreo.png" alt="Oreo dancing" class="kfallback"><canvas width="360" height="640" aria-hidden="true"></canvas><video src="${src}" muted ${cls === 'home' ? '' : 'loop autoplay'} playsinline preload="auto"></video></div>`;
   function startKeyed(root, opts = {}) {
     const v = root && root.querySelector('video'), c = root && root.querySelector('canvas');
     if (!v || !c) return;
@@ -571,7 +571,7 @@
     S.lastCeleb = C.src; save();
     const line = n === 1 ? 'You started a streak! Come back tomorrow to make it 2.' : n > 0 && n % 7 === 0 ? `${n / 7} full week${n > 7 ? 's' : ''} in a row! Oreo is SO proud!` : `${n} days in a row! Come back tomorrow to make it ${n + 1}.`;
     const notes = C.icons.map((s, i) => `<span style="left:${[2, 78, 10, 85][i]}%;top:${[30, 20, 70, 65][i]}%;animation-delay:${i * 0.4}s">${s}</span>`).join('');
-    const media = C.keyed ? keyedHTML(C.src, 'celeb') : `<img src="oreo-face.png" alt="${C.alt}"><video src="${C.src}" autoplay loop muted playsinline preload="auto"></video>`;
+    const media = C.keyed ? keyedHTML(C.src, 'celeb') : `<img src="professor-oreo.png" alt="${C.alt}"><video src="${C.src}" autoplay loop muted playsinline preload="auto"></video>`;
     const ov = modal(`<div class="dance ${C.keyed ? 'free' : ''}">${media}<div class="notes">${notes}</div></div>
       <div class="streak-num">🔥 ${n}</div>
       <h2>${C.title}</h2><p>${line}</p>${weekRow()}`, [['Keep going', 'flame', null]], 'celebrate');

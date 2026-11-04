@@ -4,8 +4,8 @@
   "description": "Professor Oreo teaches OLSAT-style thinking skills for GATE testing.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f7ecda",
-  "theme_color": "#f7ecda",
+  "background_color": "#fbefdb",
+  "theme_color": "#fbefdb",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }

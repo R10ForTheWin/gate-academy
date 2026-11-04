@@ -1,5 +1,5 @@
-const CACHE = 'gate-academy-v11';
-const PRECACHE = ['./', './index.html', './content.js', './app.js', './manifest.json', './oreo-face.png', './logo.png', './icon-192.png', './icon-512.png', './oreo-dance.mp4', './oreo-puddle.mp4', './oreo-greenscreen.mp4'];
+const CACHE = 'gate-academy-v12';
+const PRECACHE = ['./', './index.html', './content.js', './app.js', './manifest.json', './professor-oreo.png', './logo.png', './icon-192.png', './icon-512.png', './oreo-dance.mp4', './oreo-puddle.mp4', './oreo-greenscreen.mp4'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
