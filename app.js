@@ -152,18 +152,23 @@
     const curUnit = cur ? cur.unit : null;
     screen.innerHTML = `
       <div class="topline">
-        <span class="tl-title">Oreo’s GATE Academy</span>
         <button class="chip ${n ? 'hot' : ''}" data-streak>🔥 ${n ? `${n}-day streak` : 'Start a streak!'}</button>
         <span class="chip">🐟 ${S.fish} fish</span>
       </div>
-      <button class="countdown-bar" data-countdown>${countdownLine(days)}</button>
-      <div class="goal-mini"><span>Today’s goal</span><div class="goalbar"><i style="width:${Math.min(100, done / S.goal * 100)}%"></i></div><b>${Math.min(done, S.goal)}/${S.goal}</b></div>
-      ${say(msg)}
+      <div class="home-hero">
+        <div class="hero-oreo" title="Tap Oreo to dance!">${keyedHTML('oreo-greenscreen.mp4', 'home')}</div>
+        <div class="hero-right">
+          <div class="logo"><span class="logo-oreo">Oreo’s</span><span class="logo-sub">GATE Academy</span></div>
+          <div class="bubble">${msg}</div>
+        </div>
+      </div>
       <button class="continue" ${allDone ? 'data-review' : `data-node="${cur.id}"`}>
         <span class="ci">${allDone ? '🎯' : cur.icon}</span>
         <span class="cl"><small>${allDone ? 'Keep sharp' : first ? 'Start here' : 'Continue'}</small>${allDone ? 'Daily Review' : esc(cur.name)}</span>
         <span class="cg">›</span>
       </button>
+      <button class="countdown-bar" data-countdown>${countdownLine(days)}</button>
+      <div class="goal-mini"><span>Today’s goal</span><div class="goalbar"><i style="width:${Math.min(100, done / S.goal * 100)}%"></i></div><b>${Math.min(done, S.goal)}/${S.goal}</b></div>
       <div class="path">
         ${UNITS.map(u => {
           const ns = NODES.filter(x => x.unit === u.id), d = ns.filter(x => isDone(x.id)).length;
@@ -180,7 +185,10 @@
       <div class="home-links"><button class="link" data-tests>📝 Practice tests</button><button class="link" data-tips>💡 Test tips</button><button class="link" data-settings>⚙️ Settings</button></div>
       <p class="fine">Original practice puzzles written for Rose by Professor Oreo. Not affiliated with Pearson or the official OLSAT.</p>`;
     window.scrollTo(0, 0);
+    startKeyed(screen.querySelector('.keyed.home'), { once: true, holdAt: 9.5, skipDance: homeDanced });
+    homeDanced = true;
   }
+  let homeDanced = false; // Oreo dances on the first home visit each session, then holds a pose (tap to dance again)
   function countdownLine(d) {
     if (d < 0) return '<span class="cd-num">🏁</span><span class="cd-txt"><b>Test day is done!</b><small>So proud of you, Rose.</small></span>';
     if (d === 0) return '<span class="cd-num">🎉</span><span class="cd-txt"><b>Today is GATE test day!</b><small>2:45 PM · You’ve got this!</small></span>';
@@ -507,35 +515,49 @@
   function confetti() {
     const c = document.createElement('div');
     c.className = 'confetti';
-    const cols = ['#ffc800', '#ff9600', '#58cc02', '#5b4bdb', '#ff4b4b', '#2f80ed', '#fff'];
+    const cols = ['#ffcf3f', '#ff9b3d', '#5fcf73', '#6c4fe0', '#ff6b57', '#fffdf8', '#1c1a24'];
     c.innerHTML = Array.from({ length: 90 }, () => `<i style="left:${Math.random() * 100}%;background:${pick(cols)};animation-duration:${2 + Math.random() * 2.5}s;animation-delay:${Math.random() * 0.8}s"></i>`).join('');
     document.body.appendChild(c);
     setTimeout(() => c.remove(), 5500);
   }
   // ───────── green-screen Oreo: keyed live onto a canvas (works in Chrome and iPad Safari from one MP4) ─────────
-  const keyedHTML = (src, cls = '') => `<div class="keyed ${cls}"><img src="oreo-face.png" alt="Oreo dancing" class="kfallback"><canvas width="360" height="640" aria-hidden="true"></canvas><video src="${src}" muted loop playsinline autoplay preload="auto"></video></div>`;
-  function startKeyed(root) {
-    const v = root.querySelector('video'), c = root.querySelector('canvas');
+  const keyedHTML = (src, cls = '') => `<div class="keyed ${cls}"><img src="oreo-face.png" alt="Oreo dancing" class="kfallback"><canvas width="360" height="640" aria-hidden="true"></canvas><video src="${src}" muted ${cls === 'home' ? '' : 'loop autoplay'} playsinline preload="auto"></video></div>`;
+  function startKeyed(root, opts = {}) {
+    const v = root && root.querySelector('video'), c = root && root.querySelector('canvas');
     if (!v || !c) return;
     const ctx = c.getContext('2d', { willReadFrequently: true });
-    const frame = () => {
-      if (!root.isConnected) { v.pause(); return; }
-      if (v.readyState >= 2) {
-        ctx.drawImage(v, 0, 0, c.width, c.height);
-        const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i], g = d[i + 1], b = d[i + 2], m = r > b ? r : b, gr = g - m;
-          if (gr >= 90) { d[i + 3] = 0; continue; }
-          if (gr > 40) d[i + 3] = (90 - gr) * 5.1;   // soft edge
-          if (g > m) d[i + 1] = m;                    // remove green spill
-        }
-        ctx.putImageData(img, 0, 0);
-        root.classList.add('on');
+    const draw = () => {
+      if (v.readyState < 2) return;
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2], m = r > b ? r : b, gr = g - m;
+        if (gr >= 90) { d[i + 3] = 0; continue; }
+        if (gr > 40) d[i + 3] = (90 - gr) * 5.1;   // soft edge
+        if (g > m) d[i + 1] = m;                    // remove green spill
       }
-      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(frame); else requestAnimationFrame(frame);
+      ctx.putImageData(img, 0, 0);
+      root.classList.add('on');
     };
-    v.play().catch(() => {});
-    if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(frame); else requestAnimationFrame(frame);
+    const loop = () => {
+      if (!root.isConnected) { v.pause(); return; }
+      draw();
+      if (v.paused || v.ended) return;
+      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(loop); else requestAnimationFrame(loop);
+    };
+    v.addEventListener('seeked', draw);
+    if (opts.once) {
+      v.loop = false;
+      const hold = () => { v.pause(); v.currentTime = opts.holdAt; };
+      v.addEventListener('ended', hold);
+      root.addEventListener('click', () => { v.currentTime = 0; v.play().then(loop).catch(() => {}); });
+      const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (opts.skipDance || reduce) {
+        if (v.readyState >= 1) hold(); else v.addEventListener('loadedmetadata', hold, { once: true });
+        return;
+      }
+    }
+    v.play().then(loop).catch(() => {});
   }
 
   const CELEBRATIONS = [
