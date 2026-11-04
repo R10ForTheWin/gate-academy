@@ -887,10 +887,10 @@
       trick: 'Use the two complete rows to discover the rule. Try: does the third number equal first + second? first × second? Does each row add up to the same total? Then apply it to the row with the gap.' },
   };
   const CATS = [
-    { id: 'verbal', name: 'Word Power', sub: 'Verbal Comprehension', color: '#2f80ed', types: ['antonym', 'completion', 'arrange'] },
-    { id: 'reason', name: 'Word Logic', sub: 'Verbal Reasoning', color: '#9b51e0', types: ['analogy', 'classify', 'logical', 'logic', 'order', 'letters', 'arith'] },
-    { id: 'figural', name: 'Picture Puzzles', sub: 'Figural Reasoning', color: '#f2994a', types: ['figSeries', 'figAnalogy', 'figClass', 'matrix'] },
-    { id: 'quant', name: 'Number Sense', sub: 'Quantitative Reasoning', color: '#27ae60', types: ['numSeries', 'numInfer', 'numMatrix'] },
+    { id: 'verbal', name: 'Word Power', sub: 'Verbal Comprehension', color: '#4f86b8', types: ['antonym', 'completion', 'arrange'] },
+    { id: 'reason', name: 'Word Logic', sub: 'Verbal Reasoning', color: '#9a6fb0', types: ['analogy', 'classify', 'logical', 'logic', 'order', 'letters', 'arith'] },
+    { id: 'figural', name: 'Picture Puzzles', sub: 'Figural Reasoning', color: '#e39a3b', types: ['figSeries', 'figAnalogy', 'figClass', 'matrix'] },
+    { id: 'quant', name: 'Number Sense', sub: 'Quantitative Reasoning', color: '#6a9a3a', types: ['numSeries', 'numInfer', 'numMatrix'] },
   ];
   CATS.forEach(c => c.types.forEach(t => { TYPES[t].cat = c.id; }));
 

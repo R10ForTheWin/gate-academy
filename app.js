@@ -155,12 +155,10 @@
         <button class="chip ${n ? 'hot' : ''}" data-streak>🔥 ${n ? `${n}-day streak` : 'Start a streak!'}</button>
         <span class="chip">🐟 ${S.fish} fish</span>
       </div>
+      <img class="brand" src="logo.png" alt="Oreo’s GATE Academy">
       <div class="home-hero">
         <div class="hero-oreo" title="Tap Oreo to dance!">${keyedHTML('oreo-greenscreen.mp4', 'home')}</div>
-        <div class="hero-right">
-          <div class="logo"><span class="logo-oreo">Oreo’s</span><span class="logo-sub">GATE Academy</span></div>
-          <div class="bubble">${msg}</div>
-        </div>
+        <div class="hero-right"><div class="bubble"><span class="name">Professor Oreo</span>${msg}</div></div>
       </div>
       <button class="continue" ${allDone ? 'data-review' : `data-node="${cur.id}"`}>
         <span class="ci">${allDone ? '🎯' : cur.icon}</span>
@@ -515,7 +513,7 @@
   function confetti() {
     const c = document.createElement('div');
     c.className = 'confetti';
-    const cols = ['#ffcf3f', '#ff9b3d', '#5fcf73', '#6c4fe0', '#ff6b57', '#fffdf8', '#1c1a24'];
+    const cols = ['#9cb84c', '#4f7217', '#f39237', '#fbebd4', '#12100f', '#e8664f', '#fffaf1'];
     c.innerHTML = Array.from({ length: 90 }, () => `<i style="left:${Math.random() * 100}%;background:${pick(cols)};animation-duration:${2 + Math.random() * 2.5}s;animation-delay:${Math.random() * 0.8}s"></i>`).join('');
     document.body.appendChild(c);
     setTimeout(() => c.remove(), 5500);
