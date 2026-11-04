@@ -1,0 +1,11 @@
+# Source material — not part of the app
+*.pdf
+*.md
+!README.md
+Oreos Dances Horizontal.mp4
+orego dance vertical.mp4
+Cat in Puddle.mp4
+gemini_generated_video_*.mp4
+*.tmp.html
+.DS_Store
+.claude/
